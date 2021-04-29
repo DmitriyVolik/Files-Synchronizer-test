@@ -8,8 +8,10 @@ namespace Client.Files
     {
         public static string CreateMD5(string path)
         {
+            
             using (FileStream fs = System.IO.File.OpenRead(path))
             {
+                
                 MD5 md5 = new MD5CryptoServiceProvider();
                 byte[] fileData = new byte[fs.Length];
                 fs.Read(fileData, 0, (int)fs.Length);

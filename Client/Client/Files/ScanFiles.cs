@@ -15,9 +15,8 @@ namespace Client.Files
             string [] fileEntries = Directory.GetFiles(targetDirectory);
             foreach (string fileName in fileEntries)
             {
-                
-
                 FileM file = new FileM(){Path = fileName.Replace(ConfigurationManager.AppSettings.Get("MainDirectory"), "") };
+                file.Size=new FileInfo(fileName).Length;
                 list.Add(file);
             }
 

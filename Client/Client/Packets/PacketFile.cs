@@ -2,44 +2,54 @@ using System;
 using System.Configuration;
 using System.IO;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 
 namespace Chat.Packets
 {
     public static class PacketFile
     {
-
-        public static void GetFile(string FileName, TcpClient mainClient)
+        public static TcpClient getClient()
         {
-            using (var client = mainClient)
+            return new TcpClient("127.0.0.1", 1024);
+        }
+
+        public static void GetFile(string FileName)
+        {
+            string mainDir = ConfigurationManager.AppSettings.Get("MainDirectory");
+            
+            using (var client = getClient())
             {
-                var stream = client.GetStream();
-                PacketSender.SendJsonString(stream, "GET:FILE:" + FileName);
-                            
-                using (var output = File.Create(ConfigurationManager.AppSettings.Get("MainDirectory")+FileName))
+                using (var stream = client.GetStream())
                 {
-                                
-                    Console.WriteLine("Client connected. Starting to receive the file");
+                    PacketSender.SendJsonString(stream, "GET:FILE:" + FileName);
 
-                    while (true)
+                    if (!Directory.Exists(FileName))
                     {
+                        Directory.CreateDirectory(mainDir+Path.GetDirectoryName(FileName));
+                    }
+                    
+                    using (var output = File.Create(mainDir + FileName))
+                    {
+                        Console.WriteLine("Client connected. Starting to receive the file");
 
-                        byte[] buffer = new byte[1024];
-                        int bytes=0;
-                        do
+                        while (true)
                         {
-                            Console.WriteLine("start write");
-                            bytes = stream.Read(buffer, 0, buffer.Length);
-                            output.Write(buffer, 0, bytes);
-                        } while (stream.DataAvailable);
+                            Console.WriteLine("start wait file");
 
-                        if (bytes>0)
-                        {
-                            break;
+                            var buffer = new byte[1024];
+                            var bytes = 0;
+                            do
+                            {
+                                Console.WriteLine("start write");
+                                bytes = stream.Read(buffer, 0, buffer.Length);
+                                output.Write(buffer, 0, bytes);
+                            } while (stream.DataAvailable);
+
+                            if (bytes > 0) break;
                         }
                     }
                 }
             }
         }
-        
     }
 }

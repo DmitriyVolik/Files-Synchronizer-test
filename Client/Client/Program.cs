@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using Chat.Packets;
@@ -25,8 +26,8 @@ namespace Client
             while (true)
             {
                 var serverFiles = new List<FileM>();
-                string data;
 
+                string data;
 
                 using (var client = getClient())
                 {
@@ -47,47 +48,65 @@ namespace Client
                 var files = new List<FileM>();
 
                 ScanFiles.ProcessDirectory(mainDir, files);
-                
-                /*Console.WriteLine("---------------files-----------------");
-                foreach (var item in files)
-                {
-                    Console.WriteLine(item.Path);
-                }
-                Console.WriteLine("--------------server------------------");
+
                 foreach (var item in serverFiles)
                 {
-                    Console.WriteLine(item.Path);
-                }*/
-                
 
-                for (var i = 0; i < serverFiles.Count; i++)
-                {
-                    if (i >= files.Count)
+                    if (item.Size == 0)
                     {
-                        PacketFile.GetFile(serverFiles[i].Path, getClient());
                         continue;
                     }
 
-                    if (serverFiles[i].Path == files[i].Path)
+                    FileM selectedItem = files.FirstOrDefault(x => x.Path == item.Path);
+                    
+                    if (selectedItem == null)
                     {
-                        string hash = CreateFileHash.CreateMD5(mainDir+files[i].Path);
-
-                        if (hash!=serverFiles[i].Hash)
-                        {
-                            File.Delete(mainDir+files[i].Path);
-                            PacketFile.GetFile(serverFiles[i].Path, getClient());
-                        }
+                        PacketFile.GetFile(item.Path);
+                        continue;
                     }
                     else
                     {
-                        File.Delete(mainDir+files[i].Path);
-                        PacketFile.GetFile(serverFiles[i].Path, getClient());
+                        Console.WriteLine(selectedItem.Path);
                     }
-                }
 
-                Dirs.ClearEmptyDirs(mainDir);
-                
-                Thread.Sleep(60000);
+                    if (item.Size != selectedItem.Size)
+                    {
+                        File.Delete(mainDir + selectedItem.Path);
+                        PacketFile.GetFile(item.Path);
+                    }
+                    else
+                    {
+                        string hash;
+
+                        try
+                        {
+                            hash = CreateFileHash.CreateMD5(mainDir + selectedItem.Path);
+                        }
+                        catch (System.IO.IOException)
+                        {
+                            continue;
+                        }
+
+                        if (hash != item.Hash)
+                        {
+                            File.Delete(mainDir + selectedItem.Path);
+                            PacketFile.GetFile(item.Path);
+                        }
+                    }
+                    
+                    foreach (var i in files)
+                    {
+                        if (!serverFiles.Exists(x=> x.Path==i.Path))
+                        {
+                            File.Delete(mainDir+i.Path);
+                            
+                        }
+                        
+                    }
+
+                    Dirs.ClearEmptyDirs(mainDir);
+                }
+                Thread.Sleep(5000);
             }
         }
     }
